@@ -4,14 +4,16 @@ from dotenv import load_dotenv
 from typing import TypedDict
 import pandas as pd
 
-# LangGraph libraries for building the agent workflow
-from langgraph.graph import StateGraph, END
-
-# Import your specialist functions and classes
-from tools import generate_sql_query, validate_and_correct_sql, execute_sql_query, recommend_visualization, generate_insight_from_data
+from tools import is_prompt_injection, is_question_related, generate_sql_query, validate_and_correct_sql, execute_sql_query, recommend_visualization, generate_insight_from_data, sanitize_and_validate_data
 from formatter import DataFormatter
 from llm_config import get_llm
-from langchain_community.utilities import SQLDatabase
+from langchain_community.utilities import SQLDatabase # Re-added the missing import
+# CORRECTED: Added StrOutputParser to the imports for the LCEL pipeline
+from langchain_core.prompts import ChatPromptTemplate, PromptTemplate 
+from langchain_core.output_parsers import StrOutputParser
+
+# LangGraph libraries for building the agent workflow
+from langgraph.graph import StateGraph, END
 
 # Load environment variables from .env file
 load_dotenv()
@@ -33,12 +35,34 @@ class AgentState(TypedDict):
     error: str
 
 # --- 2. Create Instances of Our Tools ---
-helper_llm = get_llm(model_name="gemini-1.5-flash", temperature=0)
+helper_llm = get_llm(model_name="gemini-2.5-flash", temperature=0)
 formatter = DataFormatter(llm=helper_llm)
 db = SQLDatabase.from_uri("sqlite:///db/analytics.db")
 
 # --- 3. Define the Nodes for our Graph ---
 # Each node is a function that performs a specific action.
+
+def content_classification_node(state: AgentState):
+    """Classifies the content of the insight to ensure it is appropriate."""
+    logging.info("---NODE: CLASSIFYING CONTENT---")
+    
+    # CORRECTED: Changed LLMChain to the modern LCEL pipeline structure
+    prompt = PromptTemplate(
+        input_variables=["text"],
+        template="You are a content moderator. Classify the following text as either 'safe' or 'unsafe'. Your response must be a single word: 'safe' or 'unsafe'.\n\nText: {text}\n\nClassification:",
+    )
+    
+    # Use LCEL chain structure
+    chain = prompt | helper_llm | StrOutputParser()
+    
+    # Invoke the chain
+    classification = chain.invoke({"text": state["insight"]})
+    
+    if "unsafe" in classification.strip().lower():
+        logging.error(f"Inappropriate content detected in insight: {state['insight']}")
+        return {"error": "Inappropriate content"}
+    
+    return {}
 
 def insight_node(state: AgentState):
     """Generates an insight from the data."""
@@ -50,9 +74,30 @@ def insight_node(state: AgentState):
     insight = generate_insight_from_data(state['question'], state['sql_dataframe'])
     return {"insight": insight}
 
+def validate_question_node(state: AgentState):
+    """Validates the user's question to ensure it is related to the database content and does not contain harmful keywords."""
+    logging.info("---NODE: VALIDATING QUESTION---")
+    unsupported_keywords = [
+        'delete', 'drop', 'recreate', 'truncate', 'shutdown', 'restart', 'kill', 'grant', 'revoke',
+        'who are you', 'what is your name', 'what is ai', 'can you create a python script',
+        'how to hack', 'how to create a bomb', 'how to commit suicide'
+    ]
+    question = state.get("question", "").lower()
+    if any(keyword in question for keyword in unsupported_keywords):
+        logging.error(f"Unsupported keyword found in question: {question}")
+        return {"error": "Unsupported question"}
+
+    db_schema = db.get_table_info()
+    if not is_question_related(state["question"], db_schema):
+        logging.error(f"Unsupported question: {state['question']}")
+        return {"error": "Unsupported question"}
+    return {"db_schema": db_schema}
+
 def sql_generation_node(state: AgentState):
     """Generates the initial SQL query from the user's question."""
     logging.info("---NODE: GENERATING SQL---")
+    if state.get("error"):
+        return {}
     db_schema = db.get_table_info()
     query = generate_sql_query(state['question'], db_schema)
     return {"generated_sql": query, "db_schema": db_schema}
@@ -73,7 +118,9 @@ def sql_execution_node(state: AgentState):
     execution_result = execute_sql_query(state['validated_sql'])
     if "error" in execution_result:
         return {"error": execution_result["error"], "sql_dataframe": pd.DataFrame()}
-    return {"sql_dataframe": execution_result["sql_dataframe"]}
+    
+    sanitized_df = sanitize_and_validate_data(execution_result["sql_dataframe"])
+    return {"sql_dataframe": sanitized_df}
 
 def visualizer_node(state: AgentState):
     """Recommends a visualization type based on the query result."""
@@ -101,21 +148,25 @@ def formatter_node(state: AgentState):
 workflow = StateGraph(AgentState)
 
 # Add the nodes
+workflow.add_node("validate_question", validate_question_node)
 workflow.add_node("generate_sql", sql_generation_node)
 workflow.add_node("validate_sql", sql_validation_node)
 workflow.add_node("execute_sql", sql_execution_node)
 workflow.add_node("visualizer", visualizer_node)
 workflow.add_node("formatter", formatter_node)
 workflow.add_node("insight", insight_node)
+workflow.add_node("content_classification", content_classification_node)
 
 # Define the workflow sequence
-workflow.set_entry_point("generate_sql")
+workflow.set_entry_point("validate_question")
+workflow.add_edge("validate_question", "generate_sql")
 workflow.add_edge("generate_sql", "validate_sql")
 workflow.add_edge("validate_sql", "execute_sql")
 workflow.add_edge("execute_sql", "visualizer")
 workflow.add_edge("visualizer", "formatter")
 workflow.add_edge("formatter", "insight")
-workflow.add_edge("insight", END)
+workflow.add_edge("insight", "content_classification")
+workflow.add_edge("content_classification", END)
 
 # Compile the graph into a runnable application
 app = workflow.compile()

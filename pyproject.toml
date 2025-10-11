@@ -16,5 +16,6 @@ dependencies = [
     "sqlalchemy",
     "fastapi",
     "uvicorn[standard]",
-    "ipykernel"
+    "ipykernel",
+    "bleach"
 ]
