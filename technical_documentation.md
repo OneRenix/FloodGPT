@@ -13,8 +13,9 @@ This AI Agent uses an AI and Text-to-SQL approach to collect and simplify govern
 ### Key Features
 
 *   **Natural Language Queries:** Users can ask questions in natural language, and the application will convert them into SQL queries.
-*   **Data Visualization:** The application can generate a variety of charts to visualize the data, including bar charts, pie charts, and line charts.
+*   **Dynamic Data Visualization:** The application generates a variety of charts (bar, pie, line) to visualize data. It dynamically handles different data scales using a secondary axis and uses a professional color palette for better readability.
 *   **Data Insights:** The application can generate a human-friendly explanation of the data to help users understand the key insights and patterns.
+*   **Interactive UI:** The UI has been improved by consolidating the SQL query view into the "Tabular Results" tab, accessible via a toggle switch. The application also features a custom "rain from cloud" loading spinner.
 *   **Guardrails:** The application implements several guardrails to enhance security and reliability, including honeypot detection, rate limiting, prompt injection prevention, SQL injection prevention, and content classification to ensure appropriate interactions.
 
 ## 2. Architecture
@@ -29,9 +30,29 @@ The application has a simple client-server architecture. The frontend is a singl
 
 ### Frontend
 
-*   **`index.html`:** This is the main HTML file that contains the structure of the application.
-*   **`static/css/style.css`:** This file contains all the custom styles for the application.
-*   **`static/js/script.js`:** This file contains all the JavaScript code for interactivity, including form submission, handling API responses, and rendering charts.
+*   **`floodgpt.html`:** The main HTML file containing the application's structure, including the new toggle switch for displaying the SQL query within the "Tabular Results" tab.
+*   **`static/css/style.css`:** This file contains all custom styles, including the "rain from cloud" loading spinner animation.
+*   **`static/js/script.js`:** This file handles all interactivity, including form submission, API response handling, and chart rendering. It contains the logic for the SQL query toggle switch, dynamic chart color palettes, secondary axis for charts, and other chart layout adjustments.
+
+### Chart Rendering
+
+The application uses the Plotly.js library to generate and display charts. The process is as follows:
+
+1.  **Container:** The `floodgpt.html` file contains a `div` element with the ID `plotly-chart`. This `div` serves as the container for the chart.
+
+2.  **Rendering:** The `renderPlotly` function in `static/js/script.js` is responsible for rendering the chart. It receives the chart data from the backend, configures the layout (including title, colors, margins, etc.), and then uses `Plotly.react()` to render the chart inside the `plotly-chart` div.
+
+3.  **Dynamic Features:** The `renderPlotly` function also includes logic for dynamically handling different data scales by using a secondary x-axis and for assigning colors to the data series.
+
+### JavaScript Libraries
+
+The `static/js/script.js` file leverages several third-party libraries to enhance the application's functionality:
+
+*   **jQuery:** Provides a simplified API for DOM manipulation and event handling, and it is a dependency for the DataTables library.
+*   **DataTables:** A powerful jQuery plugin used to create interactive and feature-rich tables for displaying the tabular results from the SQL queries.
+*   **Plotly.js:** The core library used for generating all data visualizations. The `renderPlotly` function is a custom wrapper around this library.
+*   **Lucide:** Provides the icon set used throughout the application for a clean and modern look.
+*   **Showdown:** Used to convert the Markdown-formatted insights received from the backend into HTML, which is then displayed in the "Data Insights" tab.
 
 ### Backend
 
@@ -55,7 +76,7 @@ The application includes several security features to protect against common web
 
 *   **Purpose:** To trap bots that blindly fill out all form fields.
 *   **Implementation:**
-    *   **Frontend:** A hidden input field (`email_confirm`) is included in the form in `index.html`. It is hidden from human users with CSS.
+    *   **Frontend:** A hidden input field (`email_confirm`) is included in the form in `floodgpt.html`. It is hidden from human users with CSS.
     *   **Backend:** The `/stream-agent` endpoint in `api.py` checks if this field has a value. If it does, the request is rejected.
 
 ### Rate Limiting
@@ -120,7 +141,7 @@ The application includes several security features to protect against common web
 ├── Dockerfile                     # Instructions for building the application's Docker image.
 ├── formatter.py                   # Contains the DataFormatter class for chart data.
 ├── gemini.bat                     # A batch script for running the application.
-├── index.html                     # The main HTML file for the frontend.
+├── floodgpt.html                  # The main HTML file for the frontend.
 ├── LICENSE.txt                    # The project's software license.
 ├── llm_config.py                  # Configuration for the language model.
 ├── main_agent.py                  # Contains the core LangChain agent and graph logic.
@@ -163,7 +184,7 @@ This script contains the main FastAPI application. It is responsible for serving
 *   **Security Middleware:** Adds headers to prevent iframe embedding.
 *   **Rate Limiter:** Initializes and applies rate limiting to endpoints.
 *   **`/stream-agent` Endpoint:** The main API endpoint that receives user questions, performs security checks (reCAPTCHA, honeypot, rate limiting), and streams the agent's response.
-*   **`/` Endpoint:** Serves the `index.html` file.
+*   **`/` Endpoint:** Serves the `floodgpt.html` file.
 
 ### `main_agent.py`
 
@@ -234,3 +255,50 @@ This script is used to create all the necessary indexes for the database.
 
 **Functions:**
 *   `create_indexes()`: Creates indexes on the tables in the database.
+
+## 8. Getting Started
+
+This section provides instructions on how to set up and run the FloodGPT application on your local machine.
+
+### Running Locally
+
+If you prefer to run the application without Docker, you can follow these steps:
+
+1.  **Create a Python virtual environment:**
+    ```bash
+    python -m venv .venv
+    source .venv/bin/activate  # On Windows, use `.venv\Scripts\activate`
+    ```
+
+2.  **Install the dependencies:**
+    ```bash
+    uv sync
+    ```
+
+3.  **Set up the environment variables:**
+    Create a file named `.env` in the project root and add the necessary environment variables. At a minimum, you will need to provide your Google API key:
+    ```
+    GOOGLE_API_KEY="YOUR_API_KEY"
+    ```
+
+4.  **Run the application:**
+    ```bash
+    uvicorn api:app --reload
+    ```
+    This will start the application on `http://localhost:8000`. The `--reload` flag will automatically restart the server when you make changes to the code.
+
+
+### Running with Docker (Recommended)
+
+Using Docker is the recommended way to run the application, as it encapsulates all the dependencies and provides a consistent environment.
+
+1.  **Build the Docker image:**
+    ```bash
+    docker build -t floodgpt .
+    ```
+
+2.  **Run the Docker container:**
+    ```bash
+    docker run -p 8000:8000 -v .:/app --env-file .env floodgpt
+    ```
+    This command will start the application on `http://localhost:8000`. The `-v .:/app` flag mounts the local directory into the container, so any changes you make to the code will be reflected in the running application. The `--env-file .env` flag loads the environment variables from your `.env` file.
