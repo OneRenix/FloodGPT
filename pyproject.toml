@@ -17,5 +17,9 @@ dependencies = [
     "fastapi",
     "uvicorn[standard]",
     "ipykernel",
-    "bleach"
+    "bleach",
+    "ragas",
+    "datasets",
+    "slowapi",
+    "httpx"
 ]

@@ -1,0 +1,3 @@
+question,golden_sql,ground_truth_answer
+"What are the top 5 regions by total contract cost?","SELECT region, SUM(contract_cost) AS total_cost FROM flood_control_projects GROUP BY region ORDER BY total_cost DESC LIMIT 5","The top three regions by total contract cost are Region III with a total of 98005510571, National Capital Region with 52663633899, Region V with 49973685594, Region IV-A with 40062856382 and Region I with 39320913553"
+"What is the average cost of projects in the 'South' region?","SELECT AVG(contract_cost) FROM projects WHERE region = 'South'","The average cost of projects in the South region is 2000."

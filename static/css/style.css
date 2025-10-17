@@ -1,0 +1,61 @@
+/* Custom styles for DataTables dark theme */
+.dataTables_wrapper {
+  color: #d1d5db;
+}
+#results-table thead th {
+  color: #e5e7eb;
+}
+.dataTables_length label, .dataTables_filter label, .dataTables_info {
+  color: #9ca3af !important;
+}
+.dataTables_length select, .dataTables_filter input {
+  background-color: #444654 !important;
+  border-color: #5a5c6d !important;
+  color: #d1d5db !important;
+}
+.dataTables_paginate .paginate_button {
+  color: #d1d5db !important;
+  border-color: #5a5c6d !important;
+}
+.dataTables_paginate .paginate_button.current, .dataTables_paginate .paginate_button.current:hover {
+  background: #10a37f !important;
+  color: white !important;
+  border-color: #10a37f !important;
+}
+.dataTables_paginate .paginate_button:hover {
+  background: #444654 !important;
+  border-color: #5a5c6d !important;
+}
+#results-table tr:hover td {
+  background-color: #4a4b5a;
+}
+
+/* Smooth fade-in animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+/* Improved dark theme */
+body {
+  background-color: #202123;
+  font-family: 'Inter', sans-serif;
+}
+.bg-main {
+  background-color: #343541;
+}
+.bg-secondary {
+  background-color: #40414f;
+}
+.accent-color {
+  color: #113F67;
+}
+.accent-bg {
+  background-color: #113F67;
+}
+.accent-border {
+  border-color: #113F67;
+}

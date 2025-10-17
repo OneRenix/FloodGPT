@@ -1,11 +1,17 @@
-pandas                          # Data manipulation (for SQL and DB operations)
-langchain-core                  # Foundational LangChain interfaces and types
-langchain-community             # Contains utilities like BM25Retriever and integrations
-langchain-google-genai          # The LLM provider (ChatGoogleGenerativeAI)
-langchain_experimental          # Experimental or cutting-edge LangChain features
-google-generativeai             # Official Google GenAI SDK for direct interaction with models
-langgraph                       # Building stateful, multi-step LLM applications as graphs/state machines
-python-dotenv                   # Loading environment variables from a .env file
-sqlalchemy                      # SQL toolkit and Object-Relational Mapper (ORM) for database interactions
-fastapi                         # Modern, fast web framework for building APIs
-uvicorn[standard]               # ASGI server implementation used to run FastAPI applications
+pandas
+langchain-core
+langchain-community
+langchain-google-genai
+langchain_experimental
+google-generativeai
+langgraph
+python-dotenv
+sqlalchemy
+fastapi
+uvicorn[standard]
+ipykernel
+bleach
+ragas
+datasets
+slowapi
+httpx
