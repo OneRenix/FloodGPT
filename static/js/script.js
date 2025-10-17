@@ -26,7 +26,9 @@ function shortenLabel(label, maxLength = 20) {
 
 function setSampleQuery(text){
   document.getElementById('query-input').value = text.trim();
-  document.getElementById('guided-queries-modal').classList.add('hidden');
+  const modal = document.getElementById('guided-queries-modal');
+  modal.classList.add('hidden');
+  modal.style.display = 'none';
 }
 
 function openTab(evt, tabName) {
@@ -100,8 +102,12 @@ function resetResults() {
     $('#results-table').empty();
   }
   document.getElementById('viz-rec').textContent = "";
-  document.getElementById('chart-json').textContent = "";
-  document.getElementById('plotly-chart').innerHTML = "<p class='text-gray-400 mt-20 text-center'>No chart yet.</p>";
+
+  const plotlyChartDiv = document.getElementById('plotly-chart');
+  if (plotlyChartDiv.data) { // Check if a plot exists before purging
+    Plotly.purge(plotlyChartDiv);
+  }
+  plotlyChartDiv.innerHTML = "<p class='text-gray-400 mt-20 text-center'></p>";
   document.getElementById('explain-content').textContent = "";
 }
 
@@ -114,47 +120,28 @@ function submitQuery() {
 
   document.getElementById('loading-overlay').classList.remove('hidden');
 
-  grecaptcha.ready(function() {
-    grecaptcha.execute('6LfrwuwrAAAAAM33Dc6V2ua5Z2xk90VmGTh1zIZV', {
-      action: 'submit'
-    }).then(function(token) {
-      document.getElementById('recaptcha-token').value = token;
-      const honeypot = document.querySelector('[name="email_confirm"]').value;
-
-      resetResults();
-      localStorage.setItem("pendingQuery", question);
-      localStorage.setItem("recaptchaToken", token);
-      localStorage.setItem("honeypot", honeypot);
-
-      setTimeout(() => {
-        window.location.reload(true);
-      }, 300);
-    });
-  });
+  resetResults();
+  runAgent(question, "", ""); // Call runAgent directly without recaptcha token
 }
 
 function runPendingQuery() {
   const pending = localStorage.getItem("pendingQuery");
   if (pending && pending.trim() !== "") {
     document.getElementById('query-input').value = pending;
-    const token = localStorage.getItem("recaptchaToken");
-    const honeypot = localStorage.getItem("honeypot");
     localStorage.removeItem("pendingQuery");
-    localStorage.removeItem("recaptchaToken");
-    localStorage.removeItem("honeypot");
-    runAgent(pending, token, honeypot);
+    runAgent(pending, "", ""); // Pass empty strings for token and honeypot
   }
 }
 
 function runAgent(question, token, honeypot) {
-  const statusDiv = document.getElementById('status');
   const submitBtn = document.getElementById('submit-btn');
   const loadingOverlay = document.getElementById('loading-overlay');
+  const loadingStatusText = document.getElementById('loading-status-text');
 
   submitBtn.disabled = true;
   submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
   loadingOverlay.classList.remove('hidden');
-  statusDiv.textContent = 'Agent is thinking...';
+  loadingStatusText.textContent = 'FloodGPT is thinking 🤔...';
 
   fetch('/stream-agent', {
       method: 'POST',
@@ -163,7 +150,6 @@ function runAgent(question, token, honeypot) {
       },
       body: JSON.stringify({
         question: question,
-        recaptcha_token: token,
         honeypot: honeypot
       }),
     })
@@ -177,7 +163,7 @@ function runAgent(question, token, honeypot) {
           value
         }) => {
           if (done) {
-            statusDiv.textContent = 'Done!';
+            loadingStatusText.textContent = 'Done!';
             submitBtn.disabled = false;
             submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
             loadingOverlay.classList.add('hidden');
@@ -204,14 +190,14 @@ function runAgent(question, token, honeypot) {
                 } = parsedEvent;
 
                 if (nodeName === 'validate_question' && nodeOutput.error === 'Unsupported question') {
-                  statusDiv.textContent = 'Your question is not supported. Please ask questions related to flood control projects.';
+                  loadingStatusText.textContent = 'Your question is not supported. Please ask questions related to flood control projects.';
                   submitBtn.disabled = false;
                   submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
                   loadingOverlay.classList.add('hidden');
                   return;
                 }
                  if (nodeName === 'validate_question' && nodeOutput.error) {
-                    statusDiv.textContent = nodeOutput.error;
+                    loadingStatusText.textContent = nodeOutput.error;
                     submitBtn.disabled = false;
                     submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
                     loadingOverlay.classList.add('hidden');
@@ -219,26 +205,24 @@ function runAgent(question, token, honeypot) {
                 }
 
                 if (nodeName === 'validate_sql') {
-                  statusDiv.textContent = 'SQL validated. Executing...';
+                  loadingStatusText.textContent = 'Checking the data query 🧐...';
                   document.getElementById('sql-query').textContent = nodeOutput.validated_sql;
                 } else if (nodeName === 'execute_sql') {
-                  statusDiv.textContent = 'Query executed. Recommending visualization...';
+                  loadingStatusText.textContent = 'Retrieving data 💾...';
                   renderDataTable(nodeOutput.sql_dataframe);
                 } else if (nodeName === 'visualizer') {
-                  statusDiv.textContent = 'Recommendation received. Formatting data...';
-                  document.getElementById('viz-rec').textContent = `Recommended Chart Type: ${nodeOutput.visualization}`;
+                  loadingStatusText.textContent = 'Designing the chart 🎨...';
                 } else if (nodeName === 'formatter') {
-                  statusDiv.textContent = 'Process complete!';
-                  document.getElementById('chart-json').textContent = JSON.stringify(nodeOutput.formatted_data_for_visualization, null, 2);
+                  loadingStatusText.textContent = 'Preparing the chart ✨...';
                   renderPlotly(nodeOutput);
                 } else if (nodeName === 'insight') {
-                  statusDiv.textContent = 'Generating insights...';
+                  loadingStatusText.textContent = 'Analyzing results for insights 💡...';
                   const converter = new showdown.Converter();
                   const html = converter.makeHtml(nodeOutput.insight);
                   document.getElementById('explain-content').innerHTML = html;
                   openTab(null, 'explain-tab');
                 } else if (nodeName === 'end' || nodeName === 'error') {
-                  statusDiv.textContent = nodeName === 'error' ? `An error occurred: ${nodeOutput}` : 'Done!';
+                  loadingStatusText.textContent = nodeName === 'error' ? `An error occurred: ${nodeOutput}` : 'Done!';
                   submitBtn.disabled = false;
                   submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
                   loadingOverlay.classList.add('hidden');
@@ -253,86 +237,229 @@ function runAgent(question, token, honeypot) {
       push();
     })
     .catch(err => {
-      statusDiv.textContent = 'Connection to server failed.';
+      loadingStatusText.textContent = 'Connection to server failed.';
       submitBtn.disabled = false;
       submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
       loadingOverlay.classList.add('hidden');
     });
 }
 
-function renderPlotly(chartJsonWrapper){
-  let chartJson = chartJsonWrapper?.formatted_data_for_visualization || chartJsonWrapper;
-  if(chartJson.formatted_data_for_visualization) chartJson = chartJson.formatted_data_for_visualization;
+// function renderPlotly(chartJsonWrapper){
+//   let chartJson = chartJsonWrapper?.formatted_data_for_visualization || chartJsonWrapper;
+//   if(chartJson.formatted_data_for_visualization) chartJson = chartJson.formatted_data_for_visualization;
   
+//   let type = (chartJson.type || 'none').toLowerCase();
+//   let orientation = 'v';
+
+//   if(type === 'none'){
+//     document.getElementById('plotly-chart').innerHTML="<p class='text-gray-400 text-center mt-20'>No visualization available.</p>";
+//     return;
+//   }
+//   if(type === 'horizontal_bar'){
+//     type = 'bar'; 
+//     orientation = 'h';
+//   }
+//   if(!chartJson.data || !Array.isArray(chartJson.data.labels) || !Array.isArray(chartJson.data.values)){
+//     document.getElementById('plotly-chart').innerHTML="<p class='text-red-400 text-center mt-20'>Invalid chart data format.</p>"; 
+//     return;
+//   }
+
+//   let traces = [];
+//   const colors = ['#4285F4', '#DB4437', '#F4B400', '#0F9D58', '#AB47BC', '#00ACC1', '#FF7043', '#9E9D24', '#5C6BC0', '#8E24AA'];
+  
+//   if (chartJson.data.labels) {
+//     chartJson.data.labels = chartJson.data.labels.map(label => shortenLabel(label));
+//   }
+
+//   if(type === 'pie'){
+//     traces = [{
+//       labels: chartJson.data.labels,
+//       values: chartJson.data.values[0].data,
+//       type: 'pie',
+//       textinfo: 'label+percent',
+//       marker: { colors: colors },
+//       hoverinfo: 'label+percent+value'
+//     }];
+//   } else {
+//     chartJson.data.values.forEach((series, idx) => { 
+//       const trace = {
+//         x: orientation === 'v' ? chartJson.data.labels : series.data,
+//         y: orientation === 'v' ? series.data : chartJson.data.labels,
+//         name: series.label || `Series ${idx+1}`,
+//         type: type,
+//         orientation: orientation,
+//         marker: { color: colors[idx % colors.length] }
+//       };
+//       traces.push(trace);
+//     });
+//   }
+
+//   const layout = {
+//     title: {
+//       text: chartJson.options?.title || '',
+//       font: { color: '#e5e7eb', size: 18 }
+//     },
+//     paper_bgcolor: 'rgba(0,0,0,0)',
+//     plot_bgcolor: 'rgba(0,0,0,0)',
+//     font: { color: '#d1d5db' },
+//     xaxis: { gridcolor: 'rgba(255,255,255,0.1)', zerolinecolor: 'rgba(255,255,255,0.2)' },
+//     yaxis: { gridcolor: 'rgba(255,255,255,0.1)', zerolinecolor: 'rgba(255,255,255,0.2)' },
+//     margin: {
+//       l: 150,
+//       r: 50,
+//       b: 150,
+//       t: 50,
+//       pad: 4
+//     }
+//   };
+
+//   try {
+//     Plotly.react('plotly-chart', traces, layout, {responsive: true, displayModeBar: false});
+//   } catch(err) {
+//     document.getElementById('plotly-chart').innerHTML=`<p class='text-red-400 text-center mt-20'>Error rendering chart: ${err}</p>`;
+//   }
+// }
+
+function renderPlotly(chartJsonWrapper) {
+  let chartJson = chartJsonWrapper?.formatted_data_for_visualization || chartJsonWrapper;
+  if (chartJson.formatted_data_for_visualization) chartJson = chartJson.formatted_data_for_visualization;
+
   let type = (chartJson.type || 'none').toLowerCase();
   let orientation = 'v';
 
-  if(type === 'none'){
-    document.getElementById('plotly-chart').innerHTML="<p class='text-gray-400 text-center mt-20'>No visualization available.</p>";
+  if (type === 'none') {
+    document.getElementById('plotly-chart').innerHTML =
+      "<p class='text-gray-400 text-center mt-20'>No visualization available.</p>";
     return;
   }
-  if(type === 'horizontal_bar'){
-    type = 'bar'; 
+
+  if (type === 'horizontal_bar') {
+    type = 'bar';
     orientation = 'h';
   }
-  if(!chartJson.data || !Array.isArray(chartJson.data.labels) || !Array.isArray(chartJson.data.values)){
-    document.getElementById('plotly-chart').innerHTML="<p class='text-red-400 text-center mt-20'>Invalid chart data format.</p>"; 
+
+  if (!chartJson.data || !Array.isArray(chartJson.data.labels) || !Array.isArray(chartJson.data.values)) {
+    document.getElementById('plotly-chart').innerHTML =
+      "<p class='text-red-400 text-center mt-20'>Invalid chart data format.</p>";
     return;
   }
 
-  let traces = [];
-  const colors = ['#4285F4', '#DB4437', '#F4B400', '#0F9D58', '#AB47BC', '#00ACC1', '#FF7043', '#9E9D24', '#5C6BC0', '#8E24AA'];
-  
-  if (chartJson.data.labels) {
-    chartJson.data.labels = chartJson.data.labels.map(label => shortenLabel(label));
-  }
+  // 🎨 A more professional and accessible color palette
+  const tableauColors = [
+    '#4E79A7', '#F28E2B', '#E15759', '#76B7B2', '#59A14F',
+    '#EDC948', '#B07AA1', '#FF9DA7', '#9C755F', '#BAB0AC'
+  ];
 
-  if(type === 'pie'){
+  let traces = [];
+
+
+
+  if (type === 'pie') {
     traces = [{
       labels: chartJson.data.labels,
       values: chartJson.data.values[0].data,
       type: 'pie',
       textinfo: 'label+percent',
-      marker: { colors: colors },
-      hoverinfo: 'label+percent+value'
+      insidetextfont: { color: '#FAFAFA' },
+      hoverinfo: 'label+percent+value',
+      marker: {
+        colors: tableauColors,
+        line: { color: '#1f2937', width: 2 }
+      }
     }];
   } else {
-    chartJson.data.values.forEach((series, idx) => { 
+    chartJson.data.values.forEach((series, idx) => {
       const trace = {
         x: orientation === 'v' ? chartJson.data.labels : series.data,
         y: orientation === 'v' ? series.data : chartJson.data.labels,
-        name: series.label || `Series ${idx+1}`,
+        name: series.label || `Series ${idx + 1}`,
         type: type,
         orientation: orientation,
-        marker: { color: colors[idx % colors.length] }
+        marker: {
+          color: tableauColors[idx % tableauColors.length],
+          line: { color: 'rgba(255,255,255,0.15)', width: 1.5 },
+          opacity: 0.9
+        },
+        hoverlabel: {
+          bgcolor: 'rgba(255,255,255,0.1)',
+          bordercolor: '#00E5FF',
+          font: { color: '#FFFFFF' }
+        }
       };
+      if (/count/i.test(series.label)) {
+        trace.xaxis = 'x2';
+      }
       traces.push(trace);
     });
   }
 
+  // 💫 Polished Glassmorphism layout
   const layout = {
     title: {
       text: chartJson.options?.title || '',
-      font: { color: '#e5e7eb', size: 18 }
+      font: { color: '#FAFAFA', size: 20, family: 'Poppins, sans-serif' },
+      pad: { b: 40 }
     },
-    paper_bgcolor: 'rgba(0,0,0,0)',
-    plot_bgcolor: 'rgba(0,0,0,0)',
-    font: { color: '#d1d5db' },
-    xaxis: { gridcolor: 'rgba(255,255,255,0.1)', zerolinecolor: 'rgba(255,255,255,0.2)' },
-    yaxis: { gridcolor: 'rgba(255,255,255,0.1)', zerolinecolor: 'rgba(255,255,255,0.2)' },
-    margin: {
-      l: 150,
-      r: 50,
-      b: 150,
-      t: 50,
-      pad: 4
-    }
+    paper_bgcolor: 'rgba(17,17,17,0.8)',
+    plot_bgcolor: 'rgba(24,24,24,0.35)',
+    font: { color: '#EAEAEA', family: 'Inter, sans-serif' },
+    xaxis: {
+      gridcolor: 'rgba(255,255,255,0.06)',
+      zerolinecolor: 'rgba(255,255,255,0.1)',
+      tickcolor: 'rgba(255,255,255,0.2)',
+      titlefont: { color: '#FAFAFA' }
+    },
+    xaxis2: {
+      overlaying: 'x',
+      side: 'top',
+      title: '',
+      gridcolor: 'rgba(255,255,255,0.06)',
+      zerolinecolor: 'rgba(255,255,255,0.1)',
+      tickcolor: 'rgba(255,255,255,0.2)',
+      titlefont: { color: '#FAFAFA' }
+    },
+    yaxis: {
+      gridcolor: 'rgba(255,255,255,0.06)',
+      zerolinecolor: 'rgba(255,255,255,0.1)',
+      tickcolor: 'rgba(255,255,255,0.2)',
+      titlefont: { color: '#FAFAFA' },
+      automargin: true
+    },
+    legend: {
+      bgcolor: 'rgba(255,255,255,0.03)',
+      bordercolor: 'rgba(255,255,255,0.1)',
+      borderwidth: 1,
+      font: { color: '#E5E7EB', size: 13 }
+    },
+    margin: { l: 80, r: 40, b: 120, t: 60, pad: 4 },
+  
+    shapes: [
+      {
+        type: 'rect',
+        xref: 'paper',
+        yref: 'paper',
+        x0: 0, y0: 0, x1: 1, y1: 1,
+        fillcolor: 'rgba(255,255,255,0.02)',
+        line: { width: 0 },
+        layer: 'below'
+      }
+    ],
+    hovermode: 'closest',
+    transition: { duration: 600, easing: 'cubic-in-out' }
   };
 
+  console.log("Final Traces for Plotly:", JSON.stringify(traces, null, 2));
+  console.log("Final Layout for Plotly:", JSON.stringify(layout, null, 2));
+
   try {
-    Plotly.react('plotly-chart', traces, layout, {responsive: true, displayModeBar: false});
-  } catch(err) {
-    document.getElementById('plotly-chart').innerHTML=`<p class='text-red-400 text-center mt-20'>Error rendering chart: ${err}</p>`;
+    Plotly.react('plotly-chart', traces, layout, {
+      responsive: true,
+      displayModeBar: false,
+      displaylogo: false
+    });
+  } catch (err) {
+    document.getElementById('plotly-chart').innerHTML =
+      `<p class='text-red-400 text-center mt-20'>Error rendering chart: ${err}</p>`;
   }
 }
 
@@ -346,15 +473,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
   guidedQueriesBtn.addEventListener('click', () => {
     modal.classList.remove('hidden');
+    modal.style.display = 'flex'; // Explicitly set display to flex
   });
 
   closeModalBtn.addEventListener('click', () => {
     modal.classList.add('hidden');
+    modal.style.display = 'none'; // Explicitly set display to none
   });
 
   modal.addEventListener('click', (e) => {
     if (e.target === modal) {
       modal.classList.add('hidden');
+      modal.style.display = 'none'; // Explicitly set display to none
     }
+  });
+
+  const sqlToggle = document.getElementById('sql-toggle');
+  const sqlContainer = document.getElementById('sql-container');
+
+  sqlToggle.addEventListener('change', () => {
+    sqlContainer.classList.toggle('hidden');
   });
 });

@@ -21,7 +21,7 @@ from fastapi.staticfiles import StaticFiles
 from main_agent import app
 
 # --- Environment Variables ---
-RECAPTCHA_SECRET_KEY = os.getenv("RECAPTCHA_SECRET_KEY")
+
 
 # --- Rate Limiting ---
 limiter = Limiter(key_func=get_remote_address)
@@ -58,31 +58,15 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 # --- Pydantic Models ---
 class AgentRequest(BaseModel):
     question: str
-    recaptcha_token: str
     honeypot: str | None = None
 
 # --- Helper Functions ---
-async def verify_recaptcha(token: str) -> bool:
-    if not RECAPTCHA_SECRET_KEY:
-        logging.error("RECAPTCHA_SECRET_KEY is not set.")
-        return False
-    async with httpx.AsyncClient() as client:
-        response = await client.post(
-            "https://www.google.com/recaptcha/api/siteverify",
-            data={
-                "secret": RECAPTCHA_SECRET_KEY,
-                "response": token,
-            },
-        )
-        result = response.json()
-        if result.get("success") and result.get("score", 0.0) > 0.3:
-            return True
-    return False
+
 
 # --- API Endpoints ---
 
 @api.post("/stream-agent")
-@limiter.limit("5/minute")
+
 async def stream_agent_endpoint(request: Request, data: AgentRequest):
     """
     Receives a question via a POST request and streams the agent's progress.
@@ -93,11 +77,6 @@ async def stream_agent_endpoint(request: Request, data: AgentRequest):
         # Silently fail or log, but don't give the bot any indication of why.
         logging.warning(f"Honeypot field filled by {request.client.host}. Value: {data.honeypot}")
         raise HTTPException(status_code=400, detail="Invalid request")
-
-    # reCAPTCHA verification
-    if not await verify_recaptcha(data.recaptcha_token):
-        logging.warning(f"reCAPTCHA verification failed for {request.client.host}.")
-        raise HTTPException(status_code=403, detail="reCAPTCHA verification failed.")
 
     inputs = {"question": data.question}
 
@@ -125,4 +104,4 @@ async def stream_agent_endpoint(request: Request, data: AgentRequest):
 @api.get("/")
 async def read_index():
     """Serves the main index.html file at the root URL."""
-    return FileResponse('index.html')
+    return FileResponse('floodgpt.html')

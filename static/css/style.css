@@ -59,3 +59,114 @@ body {
 .accent-border {
   border-color: #113F67;
 }
+
+#plotly-chart {
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  background-color: rgba(20, 20, 20, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 16px;
+  box-shadow: 0 4px 40px rgba(123, 97, 255, 0.15);
+  transition: all 0.4s ease;
+}
+
+/* Rain from cloud animation for spinner */
+.rain-spinner {
+  position: relative;
+  width: 100px;
+  height: 100px;
+}
+
+.cloud {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 70px;
+  height: 25px;
+  background: #ccc;
+  border-radius: 20px;
+}
+
+.cloud::before,
+.cloud::after {
+  content: '';
+  position: absolute;
+  background: #ccc;
+  border-radius: 50%;
+}
+
+.cloud::before {
+  width: 35px;
+  height: 35px;
+  top: -15px;
+  left: 10px;
+}
+
+.cloud::after {
+  width: 40px;
+  height: 40px;
+  top: -20px;
+  right: 5px;
+}
+
+.rain-spinner .raindrop {
+  position: absolute;
+  width: 2px;
+  height: 15px;
+  background-color: #0077be;
+  animation: rain-fall 1s linear infinite;
+  top: 30px;
+}
+
+.rain-spinner .raindrop:nth-child(2) {
+  left: 15%;
+  animation-delay: 0.5s;
+}
+
+.rain-spinner .raindrop:nth-child(3) {
+  left: 25%;
+  animation-delay: 0.2s;
+}
+
+.rain-spinner .raindrop:nth-child(4) {
+  left: 35%;
+  animation-delay: 0.7s;
+}
+
+.rain-spinner .raindrop:nth-child(5) {
+  left: 45%;
+  animation-delay: 0.1s;
+}
+
+.rain-spinner .raindrop:nth-child(6) {
+  left: 55%;
+  animation-delay: 0.6s;
+}
+
+.rain-spinner .raindrop:nth-child(7) {
+  left: 65%;
+  animation-delay: 0.3s;
+}
+
+.rain-spinner .raindrop:nth-child(8) {
+  left: 75%;
+  animation-delay: 0.8s;
+}
+
+.rain-spinner .raindrop:nth-child(9) {
+  left: 85%;
+  animation-delay: 0.4s;
+}
+
+
+@keyframes rain-fall {
+  0% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(70px);
+    opacity: 0;
+  }
+}

@@ -136,6 +136,8 @@ def visualizer_node(state: AgentState):
         chart_type = recommendation.split('\n')[0].split(':')[1].strip()
     except (IndexError, AttributeError):
         chart_type = "none"
+    logging.info(f"Raw visualization recommendation: {recommendation}")
+    logging.info(f"Parsed visualization type: {chart_type}")
     return {"visualization": chart_type}
 
 def formatter_node(state: AgentState):

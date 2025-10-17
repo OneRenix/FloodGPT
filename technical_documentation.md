@@ -15,7 +15,7 @@ This AI Agent uses an AI and Text-to-SQL approach to collect and simplify govern
 *   **Natural Language Queries:** Users can ask questions in natural language, and the application will convert them into SQL queries.
 *   **Data Visualization:** The application can generate a variety of charts to visualize the data, including bar charts, pie charts, and line charts.
 *   **Data Insights:** The application can generate a human-friendly explanation of the data to help users understand the key insights and patterns.
-*   **Guardrails:** The application has a set of guardrails to protect it from a variety of attacks, including prompt injection, SQL injection, and inappropriate content.
+*   **Guardrails:** The application implements several guardrails to enhance security and reliability, including honeypot detection, rate limiting, prompt injection prevention, SQL injection prevention, and content classification to ensure appropriate interactions.
 
 ## 2. Architecture
 
@@ -49,12 +49,7 @@ The application has a simple client-server architecture. The frontend is a singl
 
 The application includes several security features to protect against common web vulnerabilities and abuse.
 
-### reCAPTCHA v3
 
-*   **Purpose:** To protect the form from spam and abuse by bots.
-*   **Implementation:**
-    *   **Frontend:** The reCAPTCHA v3 site key is included in `index.html`, and the JavaScript in `script.js` generates a token for each form submission.
-    *   **Backend:** The `/stream-agent` endpoint in `api.py` verifies the token with Google's reCAPTCHA service using the secret key (stored as an environment variable `RECAPTCHA_SECRET_KEY`). Submissions with a score below 0.3 are rejected.
 
 ### Honeypot Field
 
@@ -72,6 +67,16 @@ The application includes several security features to protect against common web
 
 *   **Purpose:** To prevent clickjacking attacks, where the application is embedded in a malicious website.
 *   **Implementation:** A middleware in `api.py` adds the `X-Frame-Options: DENY` and `Content-Security-Policy: frame-ancestors 'none'` headers to all responses.
+
+### Prompt Injection and SQL Injection Prevention
+
+*   **Purpose:** To protect the application from malicious prompts designed to alter the LLM's behavior or inject harmful SQL queries.
+*   **Implementation:** The `tools.py` module includes functions (`is_prompt_injection`, `is_question_related`, `validate_and_correct_sql`) that analyze user input and generated SQL queries to detect and mitigate potential injection attempts.
+
+### Content Classification
+
+*   **Purpose:** To ensure that user queries are relevant to flood control projects and to prevent inappropriate content.
+*   **Implementation:** The `main_agent.py` (via `validate_question_node`) and `tools.py` (via `is_question_related`) modules classify the content of the user's question, rejecting those that are off-topic or inappropriate.
 
 ## 5. Technologies Used
 

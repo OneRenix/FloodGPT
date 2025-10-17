@@ -54,12 +54,13 @@ class DataFormatter:
         y_cols = df.select_dtypes(include=['number']).columns
         if not y_cols.any():
             raise ValueError("Line chart data must have at least one numeric y-axis column.")
+        
+        labels = df[x_col].astype(str).tolist()
+        values = [{"data": df[col].tolist(), "label": str(col)} for col in y_cols]
+
         return {
             "type": "line",
-            "data": {
-                "xValues": df[x_col].astype(str).tolist(),
-                "yValues": [{"data": df[col].tolist(), "label": str(col)} for col in y_cols]
-            },
+            "data": {"labels": labels, "values": values},
             "options": self._get_chart_options(question, df.columns.tolist())
         }
         
@@ -70,13 +71,11 @@ class DataFormatter:
         if not label_cols.any() or len(data_cols) != 1:
             raise ValueError("Pie chart data must have exactly one text/object column and one numeric column.")
         labels_col, data_col = label_cols[0], data_cols[0]
-        pie_data = [
-            {"id": i, "value": row[data_col], "label": str(row[labels_col])}
-            for i, row in df.iterrows()
-        ]
+        labels = df[labels_col].astype(str).tolist()
+        values = [{"data": df[data_col].tolist(), "label": data_col}]
         return {
             "type": "pie",
-            "data": pie_data,
+            "data": {"labels": labels, "values": values},
             "options": self._get_chart_options(question, df.columns.tolist())
         }
 
@@ -86,16 +85,16 @@ class DataFormatter:
         if len(numeric_cols) < 2:
             raise ValueError("Scatter plot data must have at least two numeric columns.")
         x_col, y_col = numeric_cols[0], numeric_cols[1]
-        series_data = [{
-            "label": "Dataset",
-            "data": [
-                {"x": row[x_col], "y": row[y_col], "id": i}
-                for i, row in df.iterrows()
-            ]
+        
+        labels = df[x_col].astype(str).tolist()
+        values = [{
+            "label": f"{x_col} vs {y_col}",
+            "data": df[[x_col, y_col]].to_dict('records')
         }]
+
         return {
             "type": "scatter",
-            "data": {"series": series_data},
+            "data": {"labels": labels, "values": values},
             "options": self._get_chart_options(question, df.columns.tolist())
         }
 
@@ -109,7 +108,7 @@ class DataFormatter:
         question = state.get('question', '')
 
         if chart_type == "none" or df is None or df.empty:
-            return {"formatted_data_for_visualization": {"error": "No data available to format."}}
+            return {"error": "No data available to format."}
 
         try:
             # Convert NumPy types to standard Python types for JSON serialization
@@ -130,8 +129,8 @@ class DataFormatter:
             else:
                 raise ValueError(f"Unknown or unhandled chart type: {chart_type}")
             
-            return {"formatted_data_for_visualization": formatted_data}
+            return formatted_data
             
         except Exception as e:
             logging.error(f"Failed to format data due to error: {e}")
-            return {"formatted_data_for_visualization": {"error": f"Failed to format data. Details: {str(e)}"}}
+            return {"error": f"Failed to format data. Details: {str(e)}"}

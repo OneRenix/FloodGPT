@@ -258,19 +258,30 @@ def generate_insight_from_data(question: str, df: pd.DataFrame) -> str:
         return "The query returned no data, so there is nothing to explain."
 
     prompt = ChatPromptTemplate.from_template(
-        """You are an expert data analyst. Your task is to provide a clear, human-friendly explanation of the data returned from a user's query.
-        
+        """You are an expert data analyst. Your task is to clearly and human-friendly explain the meaning of the data returned from a user's query.
+
         The user asked the following question:
         "{question}"
-        
+
         The query returned the following data:
         ---
         {data_summary}
         ---
-        
-        Based on the user's question and the data, please provide a concise explanation of what the data means.
-        Focus on the key insights and patterns in the data.
-        You can also include policy implications, anomalies, or recommendations if you see any.
+
+        Based on the user's question and the data, provide a concise and insight-driven explanation of what the data means.
+
+        Focus on:
+        - The key insights, trends, or patterns observed
+        - Why these insights matter (e.g., risks, performance, opportunity, compliance)
+        - If applicable, highlight policy implications, compliance considerations, or anomalies under the context of RA 12009
+        - If suitable, include practical recommendations or next-step actions
+
+        Important rules:
+        - Do NOT speculate or hallucinate — only draw conclusions grounded in the data
+        - Use natural, human-readable language (no excessive jargon unless necessary)
+        - If the data is insufficient or unclear to conclude, state that transparently
+
+        Your goal is to produce an answer that is immediately understandable, responsible, and decision-ready — with policy awareness where relevant.
         """
     )
 

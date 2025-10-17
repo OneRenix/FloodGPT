@@ -18,7 +18,7 @@
   <script src="https://cdn.datatables.net/2.0.3/js/dataTables.min.js"></script>
   <script src="https://cdn.datatables.net/2.0.3/js/dataTables.tailwindcss.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/2.1.0/showdown.min.js"></script>
-  <script src="https://www.google.com/recaptcha/api.js?render=6LfrwuwrAAAAAM33Dc6V2ua5Z2xk90VmGTh1zIZV"></script>
+
 
   <link rel="stylesheet" href="/static/css/style.css">
 </head>
@@ -46,7 +46,7 @@
         <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
           <input id="query-input" type="text" placeholder="Type your question here..."
                  class="flex-1 px-3 py-2 rounded bg-main border border-gray-600 focus:outline-none focus:ring-2 accent-border text-white text-sm sm:text-base"/>
-          <input type="hidden" id="recaptcha-token" name="recaptcha-token">
+
           <input type="text" name="email_confirm" style="position: absolute; left: -5000px;" tabindex="-1" autocomplete="off">
           <button id="submit-btn" onclick="submitQuery()"
                   class="px-4 py-2 rounded accent-bg hover:bg-opacity-80 text-white font-semibold transition text-sm sm:text-base">
@@ -59,28 +59,39 @@
       <!-- Results Tabs -->
       <div id="results-tabs" class="bg-secondary p-4 rounded-lg shadow-lg hidden fade-in">
         <div class="flex flex-wrap border-b border-gray-600 mb-4">
-          <button class="tab-button px-3 py-2 text-xs sm:text-sm transition-colors" onclick="openTab(event, 'explain-tab')" title="Get an explanation and summary of the data.">💡 Data Insights</button>
-          <button class="tab-button px-3 py-2 text-xs sm:text-sm transition-colors" onclick="openTab(event, 'data-tab')" title="View the raw query results in a table.">📊 List of Results</button>
-          <button class="tab-button px-3 py-2 text-xs sm:text-sm transition-colors" onclick="openTab(event, 'sql-tab')" title="See the instructions the system used to retrieve the data (the SQL code).">📝 Data Retrieval</button>
-          <button class="tab-button px-3 py-2 text-xs sm:text-sm transition-colors" onclick="openTab(event, 'plotly-tab')" title="Display the generated visualization.">🖼️ Visualization</button>
-          <button class="tab-button px-3 py-2 text-xs sm:text-sm transition-colors" onclick="openTab(event, 'chartjson-tab')" title="View the technical code that built the chart.">📜 Chart Definition</button>
+          <button class="tab-button px-3 py-2 text-xs sm:text-sm transition-colors" onclick="openTab(event, 'explain-tab')" title="Get an explanation and summary of the data.">💡 Insights</button>
+          <button class="tab-button px-3 py-2 text-xs sm:text-sm transition-colors" onclick="openTab(event, 'data-tab')" title="View the raw query results in a table.">📊 Data List</button>
         </div>
 
         <!-- Tab Content -->
-        <div id="sql-tab" class="tab-content p-2 h-auto sm:h-auto max-h-screen overflow-y-auto"><pre id="sql-query" class="whitespace-pre-wrap text-xs sm:text-sm bg-main p-4 rounded-md"></pre></div>
         
         <div id="data-tab" class="tab-content p-2 h-auto sm:h-auto max-h-screen overflow-y-auto">
+          <div class="flex justify-end mb-2">
+            <label for="sql-toggle" class="flex items-center cursor-pointer">
+              <span class="mr-2 text-xs text-gray-400">Show SQL Query</span>
+              <div class="relative">
+                <input type="checkbox" id="sql-toggle" class="sr-only peer">
+                <div class="block bg-gray-600 w-10 h-6 rounded-full peer-checked:bg-blue-500 transition"></div>
+                <div class="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform transform peer-checked:translate-x-4"></div>
+              </div>
+            </label>
+          </div>
+          <div id="sql-container" class="hidden mb-4">
+            <pre id="sql-query" class="whitespace-pre-wrap text-xs sm:text-sm bg-main p-4 rounded-md"></pre>
+          </div>
           <table id="results-table" class="display w-full text-xs sm:text-sm"></table>
         </div>
         <div id="viz-tab" class="tab-content p-2 h-auto sm:h-auto max-h-screen overflow-y-auto"><pre id="viz-rec" class="whitespace-pre-wrap text-xs sm:text-sm bg-main p-4 rounded-md"></pre></div>
-        <div id="chartjson-tab" class="tab-content p-2 h-auto sm:h-auto max-h-screen overflow-y-auto"><pre id="chart-json" class="whitespace-pre-wrap text-xs sm:text-sm bg-main p-4 rounded-md"></pre></div>
-        <div id="plotly-tab" class="tab-content p-2 h-auto sm:h-auto max-h-screen overflow-y-auto">
-          <div id="plotly-chart" class="h-full w-full flex items-center justify-center text-gray-400 rounded-md bg-main">
-            <p class="mt-20">No chart yet.</p>
+
+        <div id="explain-tab" class="tab-content p-2 h-auto sm:h-auto max-h-screen overflow-y-auto">
+          <div id="plotly-chart" class="w-full h-[400px] text-gray-400 rounded-md bg-main mb-4">
+            <p class="mt-20 text-center">No chart yet.</p>
           </div>
+          <div id="explain-content" class="prose prose-invert max-w-none p-4 rounded-md text-xs sm:text-sm"></div>
         </div>
-        <div id="explain-tab" class="tab-content p-2 h-auto sm:h-auto max-h-screen overflow-y-auto"><div id="explain-content" class="prose prose-invert max-w-none p-4 rounded-md text-xs sm:text-sm"></div></div>
       </div>
+
+
     </div>
 
     <!-- Right Side: Accordion -->
@@ -103,17 +114,27 @@
         <button class="sample-query-btn group w-full text-left flex items-start space-x-2 p-1.5 rounded-md hover:bg-gray-700 transition"
                 onclick="setSampleQuery(this.querySelector('span').textContent)">
           <i data-lucide="bar-chart-3" class="w-3.5 h-3.5 text-orange-400"></i>
-          <span>Top 5 flood control projects by budget including contractor, implementing_office, contract cost and abc?</span>
+          <span>Show total project count, abc and cost per year?</span>
+        </button>
+        <button class="sample-query-btn group w-full text-left flex items-start space-x-2 p-1.5 rounded-md hover:bg-gray-700 transition"
+                onclick="setSampleQuery(this.querySelector('span').textContent)">
+          <i data-lucide="bar-chart-3" class="w-3.5 h-3.5 text-orange-400"></i>
+          <span>Show top 5 total project count, abc and cost per type of work?</span>
+        </button>
+        <button class="sample-query-btn group w-full text-left flex items-start space-x-2 p-1.5 rounded-md hover:bg-gray-700 transition"
+                onclick="setSampleQuery(this.querySelector('span').textContent)">
+          <i data-lucide="bar-chart-3" class="w-3.5 h-3.5 text-orange-400"></i>
+          <span>Top 5 flood control projects by budget including contractor, contract cost and abc?</span>
         </button>
         <button class="sample-query-btn group w-full text-left flex items-start space-x-2 p-1.5 rounded-md hover:bg-gray-700 transition"
                 onclick="setSampleQuery(this.querySelector('span').textContent)">
           <i data-lucide="pie-chart" class="w-3.5 h-3.5 text-blue-400"></i>
-          <span>Which province have the highest total budget allocation?</span>
+          <span>Top 5 province with the highest total budget allocation?</span>
         </button>
         <button class="sample-query-btn group w-full text-left flex items-start space-x-2 p-1.5 rounded-md hover:bg-gray-700 transition"
                 onclick="setSampleQuery(this.querySelector('span').textContent)">
           <i data-lucide="award" class="w-3.5 h-3.5 text-yellow-400"></i>
-          <span>Top 5 contractors with the highest total final CPES rating in year 2025.</span>
+          <span>Top 5 contractors with the highest total final CPES rating in year 2024.</span>
         </button>
         <button class="sample-query-btn group w-full text-left flex items-start space-x-2 p-1.5 rounded-md hover:bg-gray-700 transition"
                 onclick="setSampleQuery(this.querySelector('span').textContent)">
@@ -122,18 +143,13 @@
         </button>
         <button class="sample-query-btn group w-full text-left flex items-start space-x-2 p-1.5 rounded-md hover:bg-gray-700 transition"
                 onclick="setSampleQuery(this.querySelector('span').textContent)">
-          <i data-lucide="check-circle" class="w-3.5 h-3.5 text-teal-400"></i>
-          <span>Which province have the most completed projects in year 2024?</span>
-        </button>
-        <button class="sample-query-btn group w-full text-left flex items-start space-x-2 p-1.5 rounded-md hover:bg-gray-700 transition"
-                onclick="setSampleQuery(this.querySelector('span').textContent)">
           <i data-lucide="clock-4" class="w-3.5 h-3.5 text-purple-400"></i>
-          <span>Which top 5 contractors have the most delayed projects?</span>
+          <span>Which top 5 contractors have the most delayed projects? show abc and contract cost</span>
         </button>
         <button class="sample-query-btn group w-full text-left flex items-start space-x-2 p-1.5 rounded-md hover:bg-gray-700 transition"
                 onclick="setSampleQuery(this.querySelector('span').textContent)">
           <i data-lucide="alert-octagon" class="w-3.5 h-3.5 text-red-400"></i>
-          <span>Top 5 District Engineering Offices exceeding approved budgets (ABC)</span>
+          <span>Top 5 District Engineering Offices exceeding approved budgets (ABC)? show abc, contract cost?</span>
         </button>
         <button class="sample-query-btn group w-full text-left flex items-start space-x-2 p-1.5 rounded-md hover:bg-gray-700 transition"
                 onclick="setSampleQuery(this.querySelector('span').textContent)">
@@ -152,8 +168,18 @@
   <!-- Loading Overlay -->
   <div id="loading-overlay" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
     <div class="flex flex-col items-center">
-      <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-[#113F67]"></div>
-      <p class="text-white mt-4">Processing your request...</p>
+      <div class="rain-spinner">
+        <div class="cloud"></div>
+        <div class="raindrop"></div>
+        <div class="raindrop"></div>
+        <div class="raindrop"></div>
+        <div class="raindrop"></div>
+        <div class="raindrop"></div>
+        <div class="raindrop"></div>
+        <div class="raindrop"></div>
+        <div class="raindrop"></div>
+      </div>
+      <p id="loading-status-text" class="text-white mt-4">Processing your request...</p>
     </div>
   </div>
 
