@@ -32,7 +32,7 @@
         <span>FloodGPT</span>
       </h1>
     </div>
-    <button id="guided-queries-btn" class="px-3 py-1.5 rounded-md bg-gray-700 text-white text-xs sm:text-sm hover:bg-gray-600 transition">Guided Queries</button>
+    <!-- Guided Queries button is now moved below -->
   </header>
 
   <!-- Main -->
@@ -40,9 +40,32 @@
 
     <!-- Left Side: Query + Results -->
     <div class="lg:col-span-3 space-y-4 sm:space-y-6">
+
+      <!-- Guided Queries Actions -->
+      <div class="flex justify-center flex-wrap gap-2 mb-4">
+        <button class="px-3 py-1.5 rounded-md bg-gray-700 text-white text-xs hover:bg-gray-600 transition" onclick="setSampleQuery('Ipakita ang kabuuang bilang ng mga proyekto, approved budget at actual na nagastos bawat taon')">
+          Ipakita ang kabuuang bilang ng mga proyekto, approved budget at actual na nagastos bawat taon
+        </button>
+        <button class="px-3 py-1.5 rounded-md bg-gray-700 text-white text-xs hover:bg-gray-600 transition" onclick="setSampleQuery('Top 5 Average CPES rating per contractor in year 2024')">
+          Top 5 Average CPES rating per contractor in year 2024
+        </button>
+        <button class="px-3 py-1.5 rounded-md bg-gray-700 text-white text-xs hover:bg-gray-600 transition" onclick="setSampleQuery('Top 5 flood control projects batay sa laki ng budget, kasama ang contractor, actual na gastos, at approved budget.')">
+          Top 5 flood control projects batay sa laki ng budget, kasama ang contractor, actual na gastos, at approved budget.
+        </button>
+        <button class="px-3 py-1.5 rounded-md bg-gray-700 text-white text-xs hover:bg-gray-600 transition" onclick="setSampleQuery('Top 5 Contractors (Frequent Budget Overrun) include total contract costs, total approved budget and total % difference')">
+          Top 5 Contractors (Frequent Budget Overrun) include total contract costs, total approved budget and total % difference
+        </button>
+        <button class="px-3 py-1.5 rounded-md bg-gray-700 text-white text-xs hover:bg-gray-600 transition" onclick="setSampleQuery('Top 5 contractors na may pinakamataas na halaga ng kontrata')">
+          Top 5 contractors na may pinakamataas na halaga ng kontrata
+        </button>
+        <button class="px-3 py-1.5 rounded-md bg-gray-700 text-white text-xs hover:bg-gray-600 transition" onclick="setSampleQuery('Top 5 contractors na may pinaka delayed projects? kasama ang approved budget and actual cost')">
+          Top 5 contractors na may pinaka delayed projects? kasama ang approved budget and actual cost
+        </button>
+      </div>
+
       <!-- Query Input -->
       <div class="bg-secondary p-4 rounded-lg shadow-lg">
-        <label for="query-input" class="block mb-2 font-semibold text-gray-200">Ask FloodGPT</label>
+        <label for="query-input" class="block mb-2 font-semibold text-gray-200">Ginastos na bilyon para labanan ang baha bakit lalong lumalala? Hanapin ang sagot kay FloodGPT</label>
         <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
           <input id="query-input" type="text" placeholder="Type your question here..."
                  class="flex-1 px-3 py-2 rounded bg-main border border-gray-600 focus:outline-none focus:ring-2 accent-border text-white text-sm sm:text-base"/>
@@ -100,70 +123,7 @@
     
   </main>
 
-  <!-- Guided Queries Modal -->
-  <div id="guided-queries-modal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-    <div class="bg-secondary rounded-lg shadow-lg w-full max-w-2xl max-h-full overflow-y-auto p-6">
-      <div class="flex justify-between items-center mb-4">
-        <h2 class="text-lg font-bold text-white">Guided Queries</h2>
-        <button id="close-modal-btn" class="text-gray-400 hover:text-white"><i data-lucide="x"></i></button>
-      </div>
-      <div id="guided-queries-list" class="space-y-2">
-        <p class="text-gray-400 text-xs italic mb-1">
-          💡 Click a query below to auto-fill your question.
-        </p>
-        <button class="sample-query-btn group w-full text-left flex items-start space-x-2 p-1.5 rounded-md hover:bg-gray-700 transition"
-                onclick="setSampleQuery(this.querySelector('span').textContent)">
-          <i data-lucide="bar-chart-3" class="w-3.5 h-3.5 text-orange-400"></i>
-          <span>Show total project count, abc and cost per year?</span>
-        </button>
-        <button class="sample-query-btn group w-full text-left flex items-start space-x-2 p-1.5 rounded-md hover:bg-gray-700 transition"
-                onclick="setSampleQuery(this.querySelector('span').textContent)">
-          <i data-lucide="bar-chart-3" class="w-3.5 h-3.5 text-orange-400"></i>
-          <span>Show top 5 total project count, abc and cost per type of work?</span>
-        </button>
-        <button class="sample-query-btn group w-full text-left flex items-start space-x-2 p-1.5 rounded-md hover:bg-gray-700 transition"
-                onclick="setSampleQuery(this.querySelector('span').textContent)">
-          <i data-lucide="bar-chart-3" class="w-3.5 h-3.5 text-orange-400"></i>
-          <span>Top 5 flood control projects by budget including contractor, contract cost and abc?</span>
-        </button>
-        <button class="sample-query-btn group w-full text-left flex items-start space-x-2 p-1.5 rounded-md hover:bg-gray-700 transition"
-                onclick="setSampleQuery(this.querySelector('span').textContent)">
-          <i data-lucide="pie-chart" class="w-3.5 h-3.5 text-blue-400"></i>
-          <span>Top 5 province with the highest total budget allocation?</span>
-        </button>
-        <button class="sample-query-btn group w-full text-left flex items-start space-x-2 p-1.5 rounded-md hover:bg-gray-700 transition"
-                onclick="setSampleQuery(this.querySelector('span').textContent)">
-          <i data-lucide="award" class="w-3.5 h-3.5 text-yellow-400"></i>
-          <span>Top 5 contractors with the highest total final CPES rating in year 2024.</span>
-        </button>
-        <button class="sample-query-btn group w-full text-left flex items-start space-x-2 p-1.5 rounded-md hover:bg-gray-700 transition"
-                onclick="setSampleQuery(this.querySelector('span').textContent)">
-          <i data-lucide="bar-chart" class="w-3.5 h-3.5 text-green-400"></i>
-          <span>Top 5 Average CPES rating per contractor in year 2025.</span>
-        </button>
-        <button class="sample-query-btn group w-full text-left flex items-start space-x-2 p-1.5 rounded-md hover:bg-gray-700 transition"
-                onclick="setSampleQuery(this.querySelector('span').textContent)">
-          <i data-lucide="clock-4" class="w-3.5 h-3.5 text-purple-400"></i>
-          <span>Which top 5 contractors have the most delayed projects? show abc and contract cost</span>
-        </button>
-        <button class="sample-query-btn group w-full text-left flex items-start space-x-2 p-1.5 rounded-md hover:bg-gray-700 transition"
-                onclick="setSampleQuery(this.querySelector('span').textContent)">
-          <i data-lucide="alert-octagon" class="w-3.5 h-3.5 text-red-400"></i>
-          <span>Top 5 District Engineering Offices exceeding approved budgets (ABC)? show abc, contract cost?</span>
-        </button>
-        <button class="sample-query-btn group w-full text-left flex items-start space-x-2 p-1.5 rounded-md hover:bg-gray-700 transition"
-                onclick="setSampleQuery(this.querySelector('span').textContent)">
-          <i data-lucide="alert-octagon" class="w-3.5 h-3.5 text-red-400"></i>
-          <span>Top 5 contractors with highest contract cost</span>
-        </button>
-        <button class="sample-query-btn group w-full text-left flex items-start space-x-2 p-1.5 rounded-md hover:bg-gray-700 transition"
-                onclick="setSampleQuery(this.querySelector('span').textContent)">
-          <i data-lucide="trending-up" class="w-3.5 h-3.5 text-orange-400"></i>
-          <span>Which 5 contractors most frequently go over their project's approved budget? show the total contract costs, total ABCs and total % difference between contract cost</span>
-        </button>
-      </div>
-    </div>
-  </div>
+
 
   <!-- Loading Overlay -->
   <div id="loading-overlay" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">

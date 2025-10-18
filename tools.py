@@ -195,7 +195,7 @@ def execute_sql_query(sql_query: str) -> dict:
     ]
     for keyword in forbidden_keywords:
         if re.search(keyword, normalized_query):
-            error_msg = f"Forbidden SQL keyword detected: {keyword.replace(r'\b', '')}. Only SELECT queries are allowed."
+            error_msg = f"Forbidden SQL keyword detected: {keyword[2:-2]}. Only SELECT queries are allowed."
             logging.error(error_msg)
             return {"sql_dataframe": pd.DataFrame(), "error": error_msg}
             
@@ -257,33 +257,63 @@ def generate_insight_from_data(question: str, df: pd.DataFrame) -> str:
     if df.empty:
         return "The query returned no data, so there is nothing to explain."
 
-    prompt = ChatPromptTemplate.from_template(
-        """You are an expert data analyst. Your task is to clearly and human-friendly explain the meaning of the data returned from a user's query.
+    # prompt = ChatPromptTemplate.from_template(
+    #     """You are an expert data analyst. Your task is to clearly and human-friendly explain the meaning of the data returned from a user's query.
 
-        The user asked the following question:
+    #     The user asked the following question:
+    #     "{question}"
+
+    #     The query returned the following data:
+    #     ---
+    #     {data_summary}
+    #     ---
+
+    #     Based on the user's question and the data, provide a concise and insight-driven explanation of what the data means.
+
+    #     Focus on:
+    #     - The key insights, trends, or patterns observed
+    #     - Why these insights matter (e.g., risks, performance, opportunity, compliance)
+    #     - If applicable, highlight policy implications, compliance considerations, or anomalies under the context of RA 12009
+    #     - If suitable, include practical recommendations or next-step actions
+
+    #     Important rules:
+    #     - Do NOT speculate or hallucinate — only draw conclusions grounded in the data
+    #     - Use natural, human-readable language (no excessive jargon unless necessary)
+    #     - If the data is insufficient or unclear to conclude, state that transparently
+
+    #     Your goal is to produce an answer that is immediately understandable, responsible, and decision-ready — with policy awareness where relevant.
+    #     """
+    # )
+
+    prompt = ChatPromptTemplate.from_template(
+        """
+        You are a clear and trustworthy public data analysts. Your task is to provide a clear, human-friendly explanation of the data returned from a user's query as if you are informing a concerned citizen, journalist, or policymaker who wants to understand how public funds are being used — without using technical jargon.
+        The user asked:
         "{question}"
 
-        The query returned the following data:
+        The data returned is:
         ---
         {data_summary}
         ---
 
-        Based on the user's question and the data, provide a concise and insight-driven explanation of what the data means.
+        Explain the meaning of this data clearly and directly.
 
         Focus on:
-        - The key insights, trends, or patterns observed
-        - Why these insights matter (e.g., risks, performance, opportunity, compliance)
-        - If applicable, highlight policy implications, compliance considerations, or anomalies under the context of RA 12009
-        - If suitable, include practical recommendations or next-step actions
+        - The most important insight or pattern shown by the data
+        - Focus on the key insights and patterns in the data and Why this insight matters to the public (e.g., delays, value for money, contractor performance, risk to taxpayers)
+        - Identify and report any concerning behavior or anomalies, particularly those suggesting inefficiency, misuse of funds, or poor accountability. Provide relevant policy implications and recommendations if you see any.
+        - If relevant, link the insight to responsible public spending standards (e.g., transparency, efficiency, accountability) — but explain in plain language, not legal terms
 
         Important rules:
-        - Do NOT speculate or hallucinate — only draw conclusions grounded in the data
-        - Use natural, human-readable language (no excessive jargon unless necessary)
-        - If the data is insufficient or unclear to conclude, state that transparently
+        - Do not speculate or invent information — strictly interpret what the data shows
+        - Use clear, plain, human-readable language (avoid overly technical or bureaucratic wording)
+        - If the data is not enough to reach a strong conclusion, clearly say so and explain why
 
-        Your goal is to produce an answer that is immediately understandable, responsible, and decision-ready — with policy awareness where relevant.
+        Your goal is to make the data understandable, relevant, and aligned with public interest — especially for transparency and accountability purposes.
         """
     )
+
+
 
     llm = get_llm(model_name="gemini-2.5-flash", temperature=0.7)
     chain = prompt | llm | StrOutputParser()

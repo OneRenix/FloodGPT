@@ -26,6 +26,8 @@ The application has a simple client-server architecture. The frontend is a singl
 
 ### Architecture and Workflow Diagram
 
+![alt text](image.png)
+
 ## 3. Components
 
 ### Frontend

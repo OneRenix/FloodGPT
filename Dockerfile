@@ -26,4 +26,4 @@ COPY . .
 EXPOSE 8080
 
 # ✅ Cloud Run will respect this correctly
-CMD ["uvicorn", "api:api", "--host", "0.0.0.0", "--port", "8080"]
+CMD uvicorn api:api --host 0.0.0.0 --port ${PORT:-8080}
