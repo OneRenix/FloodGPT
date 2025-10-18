@@ -1,21 +1,29 @@
-# Use an official Python runtime as a parent image
-FROM python:3.11-slim
+# Stage 1: Builder
+FROM python:3.11-slim AS builder
 
-# Set the working directory in the container
 WORKDIR /app
 
-# Copy the requirements file and install the dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Install uv in builder (temporary, not in final image)
+RUN pip install uv
 
-# Copy the rest of the application code
+# Copy only dependencies first (efficient caching layer)
+COPY requirements.txt .
+
+# Install dependencies using uv
+RUN uv pip install --system -r requirements.txt
+
+# Stage 2: Final lightweight runtime
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Copy installed dependencies from builder layer
+COPY --from=builder /usr/local /usr/local
+
+# Copy app code
 COPY . .
 
-# Expose the port the app runs on. Cloud Run will automatically use this port.
 EXPOSE 8080
 
-# Define the command to run the application.
-# Cloud Run will set the PORT environment variable, but uvicorn doesn't directly use it in this CMD format.
-# We are hardcoding the port to 8080, which is a common practice for Cloud Run.
-# Make sure to configure your Cloud Run service to send requests to container port 8080.
+# ✅ Cloud Run will respect this correctly
 CMD ["uvicorn", "api:api", "--host", "0.0.0.0", "--port", "8080"]
